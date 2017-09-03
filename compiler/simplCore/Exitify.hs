@@ -135,12 +135,36 @@ exitify in_scope pairs =
             return (dc, pats, rhs')
         return $ Case (deAnnotate scrut) bndr ty alts'
 
-    go captured (_, AnnLet ann_bind body) = do
-        let bind = deAnnBind ann_bind
-        body' <- go (bindersOf bind ++ captured) body
-        return $ Let bind body'
+    go captured (_, AnnLet ann_bind body)
+        -- join point, RHS and body are tail-called
+        | AnnNonRec j rhs <- ann_bind
+        , Just join_arity <- isJoinId_maybe j
+        = do let (params, join_body) = collectNAnnBndrs join_arity rhs
+             join_body' <- go (params ++ captured) join_body
+             let rhs' = mkLams params join_body'
+             body' <- go (j : captured) body
+             return $ Let (NonRec j rhs') body'
 
-    go _ ann_e = return (deAnnotate ann_e) -- TODO: What else is a tail-call position?
+        -- rec join point, RHSs and body are tail-called
+        | AnnRec pairs <- ann_bind
+        , isJoinId (fst (head pairs))
+        = do let js = map fst pairs
+             pairs' <- forM pairs $ \(j,rhs) -> do
+                 let join_arity = idJoinArity j
+                     (params, join_body) = collectNAnnBndrs join_arity rhs
+                 join_body' <- go (params ++ js ++ captured) join_body
+                 let rhs' = mkLams params join_body'
+                 return (j, rhs')
+             body' <- go (js ++ captured) body
+             return $ Let (Rec pairs') body'
+
+        -- normal Let, only the body is tail-called
+        | otherwise
+        = do body' <- go (bindersOf bind ++ captured) body
+             return $ Let bind body'
+      where bind = deAnnBind ann_bind
+
+    go _ ann_e = return (deAnnotate ann_e)
 
 
     -- Picks a new unique, which is disjoint from
