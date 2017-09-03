@@ -135,6 +135,11 @@ exitify in_scope pairs =
             return (dc, pats, rhs')
         return $ Case (deAnnotate scrut) bndr ty alts'
 
+    go captured (_, AnnLet ann_bind body) = do
+        let bind = deAnnBind ann_bind
+        body' <- go (bindersOf bind ++ captured) body
+        return $ Let bind body'
+
     go _ ann_e = return (deAnnotate ann_e) -- TODO: What else is a tail-call position?
 
 
