@@ -24,6 +24,7 @@ module Language.Haskell.TH.Syntax
       -- * Language extensions
     , module Language.Haskell.TH.LanguageExtensions
     , ForeignSrcLang(..)
+    , ArgFlag(..)
     ) where
 
 import Data.Data hiding (Fixity(..))
@@ -1962,8 +1963,11 @@ data Type = ForallT [TyVarBndr] Cxt Type  -- ^ @forall \<vars\>. \<ctxt\> => \<t
           | WildCardT                     -- ^ @_@
       deriving( Show, Eq, Ord, Data, Generic )
 
-data TyVarBndr = PlainTV  Name            -- ^ @a@
-               | KindedTV Name Kind       -- ^ @(a :: k)@
+data ArgFlag = Required | Specified | Inferred
+  deriving ( Show, Eq, Ord, Data, Generic )
+
+data TyVarBndr = PlainTV  Name ArgFlag      -- ^ @a@ or @{a}@
+               | KindedTV Name Kind ArgFlag -- ^ @(a :: k)@ or @{a :: k}@
       deriving( Show, Eq, Ord, Data, Generic )
 
 -- | Type family result signature

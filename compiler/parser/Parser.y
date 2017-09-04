@@ -60,7 +60,7 @@ import Module
 import BasicTypes
 
 -- compiler/types
-import Type             ( funTyCon )
+import Type             ( funTyCon, ArgFlag(..) )
 import Kind             ( Kind )
 import Class            ( FunDep )
 
@@ -88,9 +88,11 @@ import Prelude
 import qualified GHC.LanguageExtensions as LangExt
 }
 
-%expect 36 -- shift/reduce conflicts
+%expect 57 -- shift/reduce conflicts
 
-{- Last updated: 3 Aug 2016
+-- TODO: Document shift-reduce conflicts introduced
+
+{- Last updated: 3 Sept 2017
 
 If you modify this parser and add a conflict, please update this comment.
 You can learn more about the conflicts by passing 'happy' the -i flag:
@@ -1960,10 +1962,18 @@ tv_bndrs :: { [LHsTyVarBndr GhcPs] }
          | {- empty -}                  { [] }
 
 tv_bndr :: { LHsTyVarBndr GhcPs }
-        : tyvar                         { sL1 $1 (UserTyVar $1) }
-        | '(' tyvar '::' kind ')'       {% ams (sLL $1 $>  (KindedTyVar $2 $4))
-                                               [mop $1,mu AnnDcolon $3
-                                               ,mcp $5] }
+        : tyvar                         { sL1 $1 (UserTyVar $1 Specified) }
+        | '{' tyvar '}'                 {% ams (sLL $1 $>  (UserTyVar $2 Inferred))
+                                               [ moc $1
+                                               , mcc $3] }
+        | '(' tyvar '::' kind ')'       {% ams (sLL $1 $>  (KindedTyVar $2 $4 Specified))
+                                               [ mop $1
+                                               , mu AnnDcolon $3
+                                               , mcp $5] }
+        | '{' tyvar '::' kind '}'       {% ams (sLL $1 $>  (KindedTyVar $2 $4 Inferred))
+                                               [ moc $1
+                                               , mu AnnDcolon $3
+                                               , mcc $5] }
 
 fds :: { Located ([AddAnn],[Located (FunDep (Located RdrName))]) }
         : {- empty -}                   { noLoc ([],[]) }

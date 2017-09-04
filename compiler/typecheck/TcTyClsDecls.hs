@@ -547,8 +547,8 @@ getFamDeclInitialKind mb_cusk decl@(FamilyDecl { fdLName     = L _ name
   = do { (tycon, _) <-
            kcHsTyVarBndrs name flav cusk True ktvs $
            do { res_k <- case resultSig of
-                      KindSig ki                        -> tcLHsKindSig ki
-                      TyVarSig (L _ (KindedTyVar _ ki)) -> tcLHsKindSig ki
+                      KindSig ki                          -> tcLHsKindSig ki
+                      TyVarSig (L _ (KindedTyVar _ ki _)) -> tcLHsKindSig ki
                       _ -- open type families have * return kind by default
                         | tcFlavourIsOpen flav     -> return liftedTypeKind
                         -- closed type families have their return kind inferred

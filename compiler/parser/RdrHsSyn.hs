@@ -79,7 +79,7 @@ import BasicTypes
 import TcEvidence       ( idHsWrapper )
 import Lexer
 import Lexeme           ( isLexCon )
-import Type             ( TyThing(..) )
+import Type             ( TyThing(..), ArgFlag(..) )
 import TysWiredIn       ( cTupleTyConName, tupleTyCon, tupleDataCon,
                           nilDataConName, nilDataConKey,
                           listTyConName, listTyConKey,
@@ -699,9 +699,9 @@ checkTyVars pp_what equals_or_where tc tparms
         -- Check that the name space is correct!
     chk (L l (HsKindSig
             (L _ (HsAppsTy [L _ (HsAppPrefix (L lv (HsTyVar _ (L _ tv))))])) k))
-        | isRdrTyVar tv    = return (L l (KindedTyVar (L lv tv) k))
+        | isRdrTyVar tv    = return (L l (KindedTyVar (L lv tv) k Inferred)) -- TODO: I *think* Inferred is the right choice...
     chk (L l (HsTyVar _ (L ltv tv)))
-        | isRdrTyVar tv    = return (L l (UserTyVar (L ltv tv)))
+        | isRdrTyVar tv    = return (L l (UserTyVar (L ltv tv) Inferred)) -- TODO: I *think* Inferred is the right choice...
     chk t@(L loc _)
         = Left (loc,
                 vcat [ text "Unexpected type" <+> quotes (ppr t)

@@ -1032,18 +1032,18 @@ bindLHsTyVarBndr :: HsDocContext
                  -> LHsTyVarBndr GhcPs
                  -> (LHsTyVarBndr GhcRn -> RnM (b, FreeVars))
                  -> RnM (b, FreeVars)
-bindLHsTyVarBndr _doc mb_assoc (L loc (UserTyVar lrdr@(L lv _))) thing_inside
+bindLHsTyVarBndr _doc mb_assoc (L loc (UserTyVar lrdr@(L lv _) arg_flag)) thing_inside
   = do { nm <- newTyVarNameRn mb_assoc lrdr
        ; bindLocalNamesFV [nm] $
-         thing_inside (L loc (UserTyVar (L lv nm))) }
+         thing_inside (L loc (UserTyVar (L lv nm) arg_flag)) }
 
-bindLHsTyVarBndr doc mb_assoc (L loc (KindedTyVar lrdr@(L lv _) kind)) thing_inside
+bindLHsTyVarBndr doc mb_assoc (L loc (KindedTyVar lrdr@(L lv _) kind arg_flag)) thing_inside
   = do { sig_ok <- xoptM LangExt.KindSignatures
            ; unless sig_ok (badKindSigErr doc kind)
            ; (kind', fvs1) <- rnLHsKind doc kind
            ; tv_nm  <- newTyVarNameRn mb_assoc lrdr
            ; (b, fvs2) <- bindLocalNamesFV [tv_nm] $
-                          thing_inside (L loc (KindedTyVar (L lv tv_nm) kind'))
+                          thing_inside (L loc (KindedTyVar (L lv tv_nm) kind' arg_flag))
            ; return (b, fvs1 `plusFV` fvs2) }
 
 newTyVarNameRn :: Maybe a -> Located RdrName -> RnM Name
@@ -1098,8 +1098,8 @@ collectAnonWildCards lty = go lty
 collectAnonWildCardsBndrs :: [LHsTyVarBndr GhcRn] -> [Name]
 collectAnonWildCardsBndrs ltvs = concatMap (go . unLoc) ltvs
   where
-    go (UserTyVar _)      = []
-    go (KindedTyVar _ ki) = collectAnonWildCards ki
+    go (UserTyVar _ _)      = []
+    go (KindedTyVar _ ki _) = collectAnonWildCards ki
 
 {-
 *********************************************************
@@ -1628,8 +1628,8 @@ rmDupsInRdrTyVars (FKTV kis tys)
 
 extractRdrKindSigVars :: LFamilyResultSig GhcPs -> RnM [Located RdrName]
 extractRdrKindSigVars (L _ resultSig)
-    | KindSig k                        <- resultSig = kindRdrNameFromSig k
-    | TyVarSig (L _ (KindedTyVar _ k)) <- resultSig = kindRdrNameFromSig k
+    | KindSig k                          <- resultSig = kindRdrNameFromSig k
+    | TyVarSig (L _ (KindedTyVar _ k _)) <- resultSig = kindRdrNameFromSig k
     | otherwise = return []
     where kindRdrNameFromSig k = freeKiTyVarsAllVars <$> extractHsTyRdrTyVars k
 
@@ -1763,7 +1763,7 @@ extract_hs_tv_bndrs_kvs :: [LHsTyVarBndr GhcPs] -> RnM [Located RdrName]
 --          the function returns [k1,k2], even though k1 is bound here
 extract_hs_tv_bndrs_kvs tv_bndrs
   = do { fktvs <- foldrM extract_lkind emptyFKTV
-                  [k | L _ (KindedTyVar _ k) <- tv_bndrs]
+                  [k | L _ (KindedTyVar _ k _) <- tv_bndrs]
        ; return (freeKiTyVarsKindVars fktvs) }
          -- There will /be/ no free tyvars!
 

@@ -1382,7 +1382,7 @@ reifyTyCon tc
                    Just name ->
                      let thName   = reifyName name
                          injAnnot = tyConInjectivityInfo tc
-                         sig = TH.TyVarSig (TH.KindedTV thName kind')
+                         sig = TH.TyVarSig (TH.KindedTV thName kind' TH.Specified) -- TODO: I *think* Specified is right here...
                          inj = case injAnnot of
                                  NotInjective -> Nothing
                                  Injective ms ->
@@ -1571,8 +1571,8 @@ reifyClass cls
     tfNames d = pprPanic "tfNames" (text (show d))
 
     bndrName :: TH.TyVarBndr -> TH.Name
-    bndrName (TH.PlainTV n)    = n
-    bndrName (TH.KindedTV n _) = n
+    bndrName (TH.PlainTV n _)    = n
+    bndrName (TH.KindedTV n _ _) = n
 
 ------------------------------
 -- | Annotate (with TH.SigT) a type if the first parameter is True
@@ -1751,7 +1751,7 @@ reifyTyVars tvs m_tc = mapM reify_tv tvs'
     -- even if the kind is *, we need to include a kind annotation,
     -- in case a poly-kind would be inferred without the annotation.
     -- See #8953 or test th/T8953
-    reify_tv tv = TH.KindedTV name <$> reifyKind kind
+    reify_tv tv = (\k -> TH.KindedTV name k TH.Specified) <$> reifyKind kind -- TODO: I *think* Specified is right here...
       where
         kind = tyVarKind tv
         name = reifyName tv

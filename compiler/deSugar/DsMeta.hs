@@ -915,18 +915,18 @@ addTyClTyVarBinds tvs m
 --
 repTyVarBndrWithKind :: LHsTyVarBndr GhcRn
                      -> Core TH.Name -> DsM (Core TH.TyVarBndrQ)
-repTyVarBndrWithKind (L _ (UserTyVar _)) nm
+repTyVarBndrWithKind (L _ (UserTyVar _ _arg_flag)) nm
   = repPlainTV nm
-repTyVarBndrWithKind (L _ (KindedTyVar _ ki)) nm
+repTyVarBndrWithKind (L _ (KindedTyVar _ ki _arg_flag)) nm
   = repLTy ki >>= repKindedTV nm
 
 -- | Represent a type variable binder
 repTyVarBndr :: LHsTyVarBndr GhcRn -> DsM (Core TH.TyVarBndrQ)
-repTyVarBndr (L _ (UserTyVar (L _ nm)) )= do { nm' <- lookupBinder nm
-                                             ; repPlainTV nm' }
-repTyVarBndr (L _ (KindedTyVar (L _ nm) ki)) = do { nm' <- lookupBinder nm
-                                                  ; ki' <- repLTy ki
-                                                  ; repKindedTV nm' ki' }
+repTyVarBndr (L _ (UserTyVar (L _ nm) _arg_flag) ) = do { nm' <- lookupBinder nm
+                                                        ; repPlainTV nm' }
+repTyVarBndr (L _ (KindedTyVar (L _ nm) ki _arg_flag)) = do { nm' <- lookupBinder nm
+                                                            ; ki' <- repLTy ki
+                                                            ; repKindedTV nm' ki' }
 
 -- represent a type context
 --

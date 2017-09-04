@@ -29,6 +29,7 @@ module HsTypes (
         HsTyLit(..),
         HsIPName(..), hsIPNameFS,
         HsAppType(..),LHsAppType,
+        ArgFlag(..),
 
         LBangType, BangType,
         HsSrcBang(..), HsImplBang(..),
@@ -403,6 +404,7 @@ instance OutputableBndr HsIPName where
 data HsTyVarBndr pass
   = UserTyVar        -- no explicit kinding
          (Located (IdP pass))
+         ArgFlag
         -- See Note [Located RdrNames] in HsExpr
   | KindedTyVar
          (Located (IdP pass))
@@ -410,6 +412,7 @@ data HsTyVarBndr pass
         -- ^
         --  - 'ApiAnnotation.AnnKeywordId' : 'ApiAnnotation.AnnOpen',
         --          'ApiAnnotation.AnnDcolon', 'ApiAnnotation.AnnClose'
+         ArgFlag
 
         -- For details on above see note [Api annotations] in ApiAnnotation
 deriving instance (DataId pass) => Data (HsTyVarBndr pass)
@@ -871,8 +874,8 @@ I don't know if this is a good idea, but there it is.
 
 ---------------------
 hsTyVarName :: HsTyVarBndr pass -> IdP pass
-hsTyVarName (UserTyVar (L _ n))     = n
-hsTyVarName (KindedTyVar (L _ n) _) = n
+hsTyVarName (UserTyVar (L _ n) _)     = n
+hsTyVarName (KindedTyVar (L _ n) _ _) = n
 
 hsLTyVarName :: LHsTyVarBndr pass -> IdP pass
 hsLTyVarName = hsTyVarName . unLoc
@@ -895,8 +898,8 @@ hsLTyVarLocNames qtvs = map hsLTyVarLocName (hsQTvExplicit qtvs)
 -- | Convert a LHsTyVarBndr to an equivalent LHsType.
 hsLTyVarBndrToType :: LHsTyVarBndr pass -> LHsType pass
 hsLTyVarBndrToType = fmap cvt
-  where cvt (UserTyVar n) = HsTyVar NotPromoted n
-        cvt (KindedTyVar (L name_loc n) kind)
+  where cvt (UserTyVar n _) = HsTyVar NotPromoted n
+        cvt (KindedTyVar (L name_loc n) kind _)
           = HsKindSig (L name_loc (HsTyVar NotPromoted (L name_loc n))) kind
 
 -- | Convert a LHsTyVarBndrs to a list of types.
@@ -1176,8 +1179,12 @@ instance (SourceTextX pass, OutputableBndrId pass)
 
 instance (SourceTextX pass, OutputableBndrId pass)
        => Outputable (HsTyVarBndr pass) where
-    ppr (UserTyVar n)     = ppr n
-    ppr (KindedTyVar n k) = parens $ hsep [ppr n, dcolon, ppr k]
+    ppr (UserTyVar n Inferred)      = ppr n
+    ppr (UserTyVar n Specified)     = braces $ ppr n
+    ppr (UserTyVar n Required)      = ppr n
+    ppr (KindedTyVar n k Inferred)  = parens $ hsep [ppr n, dcolon, ppr k]
+    ppr (KindedTyVar n k Specified) = braces $ hsep [ppr n, dcolon, ppr k]
+    ppr (KindedTyVar n k Required)  = parens $ hsep [ppr n, dcolon, ppr k]
 
 instance (Outputable thing) => Outputable (HsImplicitBndrs pass thing) where
     ppr (HsIB { hsib_body = ty }) = ppr ty

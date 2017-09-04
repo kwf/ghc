@@ -1152,14 +1152,20 @@ cvtOpAppP x op y
 cvtTvs :: [TH.TyVarBndr] -> CvtM (LHsQTyVars GhcPs)
 cvtTvs tvs = do { tvs' <- mapM cvt_tv tvs; return (mkHsQTvs tvs') }
 
+-- Convert from a TH ArgFlag to a GHC one
+cvt_arg_flag :: TH.ArgFlag -> Type.ArgFlag
+cvt_arg_flag TH.Required  = Type.Required
+cvt_arg_flag TH.Specified = Type.Specified
+cvt_arg_flag TH.Inferred  = Type.Inferred
+
 cvt_tv :: TH.TyVarBndr -> CvtM (LHsTyVarBndr GhcPs)
-cvt_tv (TH.PlainTV nm)
+cvt_tv (TH.PlainTV nm arg_flag)
   = do { nm' <- tNameL nm
-       ; returnL $ UserTyVar nm' }
-cvt_tv (TH.KindedTV nm ki)
+       ; returnL $ UserTyVar nm' (cvt_arg_flag arg_flag) }
+cvt_tv (TH.KindedTV nm ki arg_flag)
   = do { nm' <- tNameL nm
        ; ki' <- cvtKind ki
-       ; returnL $ KindedTyVar nm' ki' }
+       ; returnL $ KindedTyVar nm' ki' (cvt_arg_flag arg_flag) }
 
 cvtRole :: TH.Role -> Maybe Coercion.Role
 cvtRole TH.NominalR          = Just Coercion.Nominal

@@ -2136,7 +2136,8 @@ getGhciStepIO = do
     let ghciM   = nlHsAppTy (nlHsTyVar ghciTy) (nlHsTyVar a_tv)
         ioM     = nlHsAppTy (nlHsTyVar ioTyConName) (nlHsTyVar a_tv)
 
-        step_ty = noLoc $ HsForAllTy { hst_bndrs = [noLoc $ UserTyVar (noLoc a_tv)]
+        step_ty = noLoc $ HsForAllTy { hst_bndrs = [noLoc $ -- TODO: I *think* Inferred is right here
+                                                    UserTyVar (noLoc a_tv) Inferred]
                                      , hst_body  = nlHsFunTy ghciM ioM }
 
         stepTy :: LHsSigWcType GhcRn

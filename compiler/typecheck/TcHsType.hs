@@ -1472,7 +1472,7 @@ kcHsTyVarBndrs name flav cusk all_kind_vars
       = tcExtendTyVarEnv [tv] thing_inside
 
     kc_hs_tv :: HsTyVarBndr GhcRn -> TcM (TcTyVar, Bool)
-    kc_hs_tv (UserTyVar lname@(L _ name))
+    kc_hs_tv (UserTyVar lname@(L _ name) _)
       = do { tv_pair@(tv, scoped) <- tcHsTyVarName Nothing name
 
               -- Open type/data families default their variables to kind *.
@@ -1482,7 +1482,7 @@ kcHsTyVarBndrs name flav cusk all_kind_vars
 
            ; return tv_pair }
 
-    kc_hs_tv (KindedTyVar (L _ name) lhs_kind)
+    kc_hs_tv (KindedTyVar (L _ name) lhs_kind _)
       = do { kind <- tcLHsKindSig lhs_kind
            ; tcHsTyVarName (Just kind) name }
 
@@ -1602,11 +1602,11 @@ tcHsTyVarBndr :: (Name -> Kind -> TcM TyVar)
 --
 -- See also Note [Associated type tyvar names] in Class
 --
-tcHsTyVarBndr new_tv (UserTyVar (L _ name))
+tcHsTyVarBndr new_tv (UserTyVar (L _ name) _)
   = do { kind <- newMetaKindVar
        ; new_tv name kind }
 
-tcHsTyVarBndr new_tv (KindedTyVar (L _ name) kind)
+tcHsTyVarBndr new_tv (KindedTyVar (L _ name) kind _)
   = do { kind <- tcLHsKindSig kind
        ; new_tv name kind }
 

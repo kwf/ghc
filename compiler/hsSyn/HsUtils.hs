@@ -54,7 +54,7 @@ module HsUtils(
   mkBigLHsVarTup, mkBigLHsTup, mkBigLHsVarPatTup, mkBigLHsPatTup,
 
   -- Types
-  mkHsAppTy, mkHsAppTys, userHsTyVarBndrs, userHsLTyVarBndrs,
+  mkHsAppTy, mkHsAppTys, -- userHsTyVarBndrs, userHsLTyVarBndrs, -- TODO: currently broken
   mkLHsSigType, mkLHsSigWcType, mkClassOpSigs, mkHsSigEnv,
   nlHsAppTy, nlHsTyVar, nlHsFunTy, nlHsParTy, nlHsTyConApp,
 
@@ -359,14 +359,20 @@ mkHsStringPrimLit fs
   = HsStringPrim noSourceText (fastStringToByteString fs)
 
 -------------
+-- KWF: These don't seem to be used anywhere in the compiler, and because we
+-- can't invent an ArgFlag from nothing, they can't be implemented with user-
+-- specified ArgFlags. Commenting out... but
+-- TODO: What to do about these?
+
+{-
 userHsLTyVarBndrs :: SrcSpan -> [Located (IdP name)] -> [LHsTyVarBndr name]
 -- Caller sets location
-userHsLTyVarBndrs loc bndrs = [ L loc (UserTyVar v) | v <- bndrs ]
+userHsLTyVarBndrs loc bndrs = [ L loc (UserTyVar v _) | v <- bndrs ]
 
 userHsTyVarBndrs :: SrcSpan -> [IdP name] -> [LHsTyVarBndr name]
 -- Caller sets location
-userHsTyVarBndrs loc bndrs = [ L loc (UserTyVar (L loc v)) | v <- bndrs ]
-
+userHsTyVarBndrs loc bndrs = [ L loc (UserTyVar (L loc v) _) | v <- bndrs ]
+-}
 
 {-
 ************************************************************************
@@ -633,7 +639,7 @@ typeToLHsType ty
                         , hst_body = go tau })
     go (FunTy arg res) = nlHsFunTy (go arg) (go res)
     go ty@(ForAllTy {})
-      | (tvs, tau) <- tcSplitForAllTys ty
+      | (tvs, tau) <- tcSplitForAllTyVarBndrs ty
       = noLoc (HsForAllTy { hst_bndrs = map go_tv tvs
                           , hst_body = go tau })
     go (TyVarTy tv)         = nlHsTyVar (getRdrName tv)
@@ -649,9 +655,11 @@ typeToLHsType ty
          -- Source-language types have _invisible_ kind arguments,
          -- so we must remove them here (Trac #8563)
 
-    go_tv :: TyVar -> LHsTyVarBndr GhcPs
-    go_tv tv = noLoc $ KindedTyVar (noLoc (getRdrName tv))
-                                   (go (tyVarKind tv))
+    go_tv :: TyVarBinder -> LHsTyVarBndr GhcPs
+    go_tv (TvBndr tv arg_flag) =
+      noLoc $ KindedTyVar (noLoc (getRdrName tv))
+                          (go (tyVarKind tv))
+                          arg_flag
 
 
 {- *********************************************************************
